@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rathna Learners - Student Management POS</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: { primary: '#3b82f6', secondary: '#10b981', dark: '#0f172a', card: '#1e293b' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), url('Gemini_Generated_Image_bc6zzmbc6zzmbc6z.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        @media print {
+            body { background-image: none !important; background-color: white !important; }
+            body > * { display: none !important; }
+            body.print-modal #detailsModal { display: flex !important; position: absolute !important; width: 100% !important; background: white !important; z-index: 9999; }
+            body.print-list #printListContainer { display: block !important; position: absolute !important; width: 100% !important; z-index: 9999; background: white !important; }
+            .no-print { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: black !important; border-color: #ddd !important; }
+        }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden text-slate-200 antialiased flex flex-col">
+
+    <script>
+        // Supabase Initialization
+        const SUPABASE_URL = 'https://owpghuwmwahcuaomqanh.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cGdodXdtd2FoY3Vhb21xYW5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTIxNzAsImV4cCI6MjA4NzI2ODE3MH0.Dc61E99ob2amYI63N_qNQK7gSEqbpkZzQBpcBM2W6Xw';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    </script>
+
+    <!-- Login Screen (Same as Original) -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4">
+        <div class="glass p-8 rounded-2xl w-full max-w-md shadow-2xl border border-white/10">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-600 rounded-xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-4">RL</div>
+                <h1 class="text-2xl font-bold text-white">System Login</h1>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <input type="text" id="loginUser" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white" placeholder="Username" required>
+                <input type="password" id="loginPass" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white" placeholder="Password" required>
+                <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App Wrapper (Same as Original) -->
+    <div id="mainApp" class="hidden h-full flex flex-col relative opacity-0 transition-opacity duration-1000">
+        <!-- Header -->
+        <header class="h-16 glass z-50 flex items-center justify-between px-6 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">RL</div>
+                <h1 class="text-xl font-bold">Rathna Learners</h1>
+            </div>
+            <div class="flex-1 max-w-xl mx-8">
+                <input type="text" id="searchInput" class="w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white" placeholder="Search by Name, Reg No, or NIC...">
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right"><div id="clockTime" class="text-lg font-bold">00:00:00</div><div id="clockDate" class="text-xs text-slate-400">Loading...</div></div>
+                <button onclick="logout()" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-red-500"><i class="fas fa-power-off"></i></button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="w-[400px] flex flex-col glass border-r border-white/5" id="sidePanel">
+                <div class="p-5 border-b border-white/5 bg-slate-800/30 font-semibold">New Registration</div>
+                <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                    <form id="studentForm" class="space-y-4">
+                        <div class="flex flex-col items-center mb-4">
+                            <div class="relative group cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                                <div id="photoPreview" class="w-32 h-32 rounded-full bg-slate-700 border-4 border-slate-600 overflow-hidden flex items-center justify-center">
+                                    <i class="fas fa-camera text-4xl text-slate-500"></i>
+                                </div>
+                            </div>
+                            <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="previewPhoto(event)">
+                            <button type="button" onclick="removePhoto()" id="removePhotoBtn" class="hidden text-xs text-red-400 mt-2">Remove Photo</button>
+                        </div>
+                        <input type="text" id="regNo" required class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Reg No (F-001)">
+                        <input type="text" id="fullName" required class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Full Name">
+                        <input type="text" id="initialsName" class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Name with Initials">
+                        <input type="text" id="nic" required class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="NIC Number">
+                        <select id="bloodGroup" class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl">
+                            <option value="" disabled selected>Select Blood Group</option>
+                            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                        </select>
+                        <input type="tel" id="contact" required class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Contact No">
+                        <input type="email" id="email" class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Email">
+                        <textarea id="address" rows="2" class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl" placeholder="Address"></textarea>
+                    </form>
+                </div>
+                <div class="p-5 border-t border-white/10 bg-slate-800/50 grid grid-cols-2 gap-3">
+                    <button type="button" onclick="clearForm()" class="px-4 py-3 rounded-xl border border-slate-600">Clear</button>
+                    <button type="submit" form="studentForm" id="saveBtn" class="px-4 py-3 rounded-xl bg-emerald-600 font-bold">Save Student</button>
+                </div>
+            </aside>
+
+            <!-- Data Grid -->
+            <section class="flex-1 flex flex-col bg-slate-900/50">
+                <div class="h-14 border-b border-white/5 flex items-center px-6 gap-6">
+                    <div class="text-sm">Total Students: <strong id="totalCount">0</strong></div>
+                    <button onclick="printFullList()" class="ml-auto bg-slate-700 px-3 py-1.5 rounded-lg text-xs">Print Registry</button>
+                </div>
+                <div class="flex-1 overflow-auto p-6">
+                    <div class="glass rounded-2xl overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-800/80 text-xs uppercase text-slate-400">
+                                <tr>
+                                    <th class="p-4 w-24">Reg No</th>
+                                    <th class="p-4">Student Name</th>
+                                    <th class="p-4 w-32">NIC</th>
+                                    <th class="p-4 w-32">Contact</th>
+                                    <th class="p-4 w-20 text-center">Blood</th>
+                                    <th class="p-4 w-24 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody" class="text-sm divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Student Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md hidden items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 rounded-3xl shadow-2xl w-full max-w-2xl border border-white/10 overflow-hidden" id="detailsModalContent">
+            <div class="bg-blue-600 p-8 text-center relative">
+                <button onclick="closeDetailsModal()" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fas fa-times"></i></button>
+                <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                    <img id="viewPhotoImg" src="" class="w-full h-full object-cover hidden">
+                    <i id="viewPhotoIcon" class="fas fa-user-graduate text-4xl text-white"></i>
+                </div>
+                <h2 id="viewFullName" class="text-2xl font-bold">Student Name</h2>
+            </div>
+            <div class="p-8 grid grid-cols-2 gap-6">
+                <div><label class="text-xs text-slate-500 uppercase">Reg No</label><div id="viewRegNo" class="text-lg font-bold text-emerald-400"></div></div>
+                <div><label class="text-xs text-slate-500 uppercase">NIC</label><div id="viewNIC" class="text-lg"></div></div>
+                <div><label class="text-xs text-slate-500 uppercase">Contact</label><div id="viewContact" class="text-lg"></div></div>
+                <div><label class="text-xs text-slate-500 uppercase">Blood Group</label><div id="viewBloodGroup" class="text-lg"></div></div>
+                <div class="col-span-2"><label class="text-xs text-slate-500 uppercase">Address</label><div id="viewAddress" class="text-lg"></div></div>
+            </div>
+            <div class="p-6 border-t border-white/5 flex justify-end gap-3 no-print">
+                <button onclick="window.print()" class="px-6 py-2 bg-slate-700 rounded-xl">Print</button>
+                <button onclick="closeDetailsModal()" class="px-6 py-2 bg-blue-600 rounded-xl">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let editingId = null;
+        let photoBase64 = null;
+
+        // --- Core Functions ---
+        async function refreshTable(query = '') {
+            let request = db.from('students').select('*').order('created_at', { ascending: false });
+            if (query) {
+                request = request.or(`fullname.ilike.%${query}%,regno.ilike.%${query}%,nic.ilike.%${query}%`);
+            }
+            const { data: students, error } = await request;
+            if (error) return;
+
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('totalCount').innerText = students.length;
+
+            students.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 cursor-pointer border-b border-white/5 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono text-emerald-400">${s.regno}</td>
+                    <td class="p-4 font-bold">${s.fullname}</td>
+                    <td class="p-4 text-xs text-slate-400">${s.nic}</td>
+                    <td class="p-4 text-slate-300">${s.contact}</td>
+                    <td class="p-4 text-center"><span class="bg-slate-800 px-2 py-1 rounded text-xs">${s.bloodgroup || '-'}</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="editStudent(${s.id}, event)" class="text-amber-500 p-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteStudent(${s.id}, event)" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tr.onclick = (e) => { if(!e.target.closest('button')) viewStudent(s); };
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function saveStudent(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            const studentData = {
+                regno: document.getElementById('regNo').value,
+                fullname: document.getElementById('fullName').value,
+                initialsname: document.getElementById('initialsName').value,
+                nic: document.getElementById('nic').value,
+                contact: document.getElementById('contact').value,
+                email: document.getElementById('email').value,
+                bloodgroup: document.getElementById('bloodGroup').value,
+                address: document.getElementById('address').value,
+                photo: photoBase64
+            };
+
+            const response = editingId 
+                ? await db.from('students').update(studentData).eq('id', editingId)
+                : await db.from('students').insert([studentData]);
+
+            if (response.error) {
+                alert("Error: " + response.error.message);
+            } else {
+                clearForm();
+                refreshTable();
+            }
+            btn.disabled = false;
+            btn.innerText = "Save Student";
+        }
+
+        async function deleteStudent(id, e) {
+            e.stopPropagation();
+            if (confirm("Delete this student permanently?")) {
+                await db.from('students').delete().eq('id', id);
+                refreshTable();
+            }
+        }
+
+        async function editStudent(id, e) {
+            e.stopPropagation();
+            const { data: s } = await db.from('students').select('*').eq('id', id).single();
+            if (s) {
+                editingId = s.id;
+                document.getElementById('regNo').value = s.regno;
+                document.getElementById('fullName').value = s.fullname;
+                document.getElementById('initialsName').value = s.initialsname || '';
+                document.getElementById('nic').value = s.nic;
+                document.getElementById('contact').value = s.contact;
+                document.getElementById('email').value = s.email || '';
+                document.getElementById('bloodGroup').value = s.bloodgroup || '';
+                document.getElementById('address').value = s.address || '';
+                if (s.photo) {
+                    photoBase64 = s.photo;
+                    document.getElementById('photoPreview').innerHTML = `<img src="${s.photo}" class="w-full h-full object-cover">`;
+                    document.getElementById('removePhotoBtn').classList.remove('hidden');
+                }
+                document.getElementById('saveBtn').innerText = "Update Student";
+                document.getElementById('saveBtn').classList.replace('bg-emerald-600', 'bg-amber-600');
+            }
+        }
+
+        function viewStudent(s) {
+            document.getElementById('viewRegNo').innerText = s.regno;
+            document.getElementById('viewFullName').innerText = s.fullname;
+            document.getElementById('viewNIC').innerText = s.nic;
+            document.getElementById('viewContact').innerText = s.contact;
+            document.getElementById('viewBloodGroup').innerText = s.bloodgroup || '-';
+            document.getElementById('viewAddress').innerText = s.address || '-';
+            const img = document.getElementById('viewPhotoImg');
+            const icon = document.getElementById('viewPhotoIcon');
+            if (s.photo) { img.src = s.photo; img.classList.remove('hidden'); icon.classList.add('hidden'); }
+            else { img.classList.add('hidden'); icon.classList.remove('hidden'); }
+            const modal = document.getElementById('detailsModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeDetailsModal() {
+            const modal = document.getElementById('detailsModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function previewPhoto(e) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                photoBase64 = reader.result;
+                document.getElementById('photoPreview').innerHTML = `<img src="${photoBase64}" class="w-full h-full object-cover">`;
+                document.getElementById('removePhotoBtn').classList.remove('hidden');
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+
+        function removePhoto() {
+            photoBase64 = null;
+            document.getElementById('photoPreview').innerHTML = `<i class="fas fa-camera text-4xl text-slate-500"></i>`;
+            document.getElementById('removePhotoBtn').classList.add('hidden');
+            document.getElementById('photoInput').value = '';
+        }
+
+        function clearForm() {
+            document.getElementById('studentForm').reset();
+            removePhoto();
+            editingId = null;
+            document.getElementById('saveBtn').innerText = "Save Student";
+            document.getElementById('saveBtn').classList.replace('bg-amber-600', 'bg-emerald-600');
+        }
+
+        // --- Logic & Auth ---
+        document.getElementById('loginForm').onsubmit = (e) => {
+            e.preventDefault();
+            if (document.getElementById('loginUser').value === 'admin' && document.getElementById('loginPass').value === '1234') {
+                localStorage.setItem('pos_logged_in', 'true');
+                showMainApp();
+            } else { alert("Wrong credentials!"); }
+        };
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            const main = document.getElementById('mainApp');
+            main.classList.remove('hidden');
+            setTimeout(() => main.classList.remove('opacity-0'), 100);
+            refreshTable();
+        }
+
+        function logout() { localStorage.removeItem('pos_logged_in'); location.reload(); }
+
+        document.getElementById('searchInput').oninput = (e) => refreshTable(e.target.value.trim());
+        document.getElementById('studentForm').onsubmit = saveStudent;
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('clockTime').innerText = now.toLocaleTimeString('en-GB');
+                document.getElementById('clockDate').innerText = now.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short'});
+            }, 1000);
+        }
+
+        async function printFullList() {
+            const { data: students } = await db.from('students').select('*').order('regno');
+            let html = `<div style="padding:40px; font-family:sans-serif;">
+                <h1 style="text-align:center;">Rathna Learners - Student Registry</h1>
+                <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+                    <thead><tr style="border-bottom:2px solid black; text-align:left;">
+                        <th style="padding:10px;">Reg No</th><th>Name</th><th>NIC</th><th>Contact</th>
+                    </tr></thead><tbody>`;
+            students.forEach(s => {
+                html += `<tr style="border-bottom:1px solid #ddd;">
+                    <td style="padding:10px;">${s.regno}</td><td>${s.fullname}</td><td>${s.nic}</td><td>${s.contact}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById('printListContainer').innerHTML = html;
+            document.body.classList.add('print-list');
+            window.print();
+            setTimeout(() => document.body.classList.remove('print-list'), 500);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('pos_logged_in') === 'true') showMainApp();
+            startClock();
+        });
+    </script>
+    <div id="printListContainer" class="hidden"></div>
+</body>
+</html>
